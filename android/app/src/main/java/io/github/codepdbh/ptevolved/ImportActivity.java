@@ -51,6 +51,8 @@ public class ImportActivity extends Activity {
     private Button cancel;
     private Button play;
     private final TextView[] fileRows = new TextView[PtPaths.GAME_FILES.length];
+    private static final int[] RESOLUTIONS = {0, 720, 540, 360};
+    private final Button[] resolutionButtons = new Button[RESOLUTIONS.length];
     private final AtomicBoolean cancelled = new AtomicBoolean();
     private Thread worker;
 
@@ -152,6 +154,29 @@ public class ImportActivity extends Activity {
         progress.setVisibility(View.INVISIBLE);
         panel.addView(progress, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(14)));
 
+        LinearLayout resolutions = new LinearLayout(this);
+        resolutions.setOrientation(LinearLayout.HORIZONTAL);
+        resolutions.setGravity(Gravity.CENTER_VERTICAL);
+        TextView resolutionLabel = new TextView(this);
+        resolutionLabel.setText("Resolución");
+        resolutionLabel.setTextColor(MUTED);
+        resolutionLabel.setTextSize(13);
+        resolutions.addView(resolutionLabel, new LinearLayout.LayoutParams(dp(84), LinearLayout.LayoutParams.WRAP_CONTENT));
+        for (int i = 0; i < RESOLUTIONS.length; ++i) {
+            final int height = RESOLUTIONS[i];
+            Button option = button(height == 0 ? "Nativa" : height + "p", Color.rgb(28, 28, 30), Color.rgb(70, 70, 72));
+            option.setTextSize(13);
+            option.setOnClickListener(v -> chooseResolution(height));
+            LinearLayout.LayoutParams optionParams = new LinearLayout.LayoutParams(0, dp(34), 1f);
+            optionParams.leftMargin = dp(6);
+            resolutions.addView(option, optionParams);
+            resolutionButtons[i] = option;
+        }
+        LinearLayout.LayoutParams resolutionsParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        resolutionsParams.bottomMargin = dp(10);
+        panel.addView(resolutions, resolutionsParams);
+        chooseResolution(getSharedPreferences(PtActivity.PREFERENCES, MODE_PRIVATE).getInt(PtActivity.KEY_RENDER_HEIGHT, 0));
+
         LinearLayout actions = new LinearLayout(this);
         actions.setOrientation(LinearLayout.HORIZONTAL);
         pick = button("Seleccionar archivos", Color.rgb(28, 28, 30), Color.rgb(70, 70, 72));
@@ -185,6 +210,15 @@ public class ImportActivity extends Activity {
         screen.setFitsSystemWindows(true);
         screen.addView(root, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
         setContentView(screen);
+    }
+
+    private void chooseResolution(int height) {
+        getSharedPreferences(PtActivity.PREFERENCES, MODE_PRIVATE).edit().putInt(PtActivity.KEY_RENDER_HEIGHT, height).apply();
+        for (int i = 0; i < RESOLUTIONS.length; ++i) {
+            boolean chosen = RESOLUTIONS[i] == height;
+            resolutionButtons[i].setBackground(chosen ? box(Color.rgb(226, 226, 222), 0) : box(Color.rgb(28, 28, 30), Color.rgb(70, 70, 72)));
+            resolutionButtons[i].setTextColor(chosen ? Color.rgb(8, 8, 9) : INK);
+        }
     }
 
     /** Also runs on the way back from the system's permission screen. */

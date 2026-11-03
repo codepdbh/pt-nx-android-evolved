@@ -26,6 +26,8 @@ public class PtActivity extends SDLActivity {
     static final String EXTRA_ARGS = "pt_args";
     static final String EXTRA_SELFTEST = "pt_selftest";
     static final String EXTRA_ENV = "pt_env";
+    static final String PREFERENCES = "launcher";
+    static final String KEY_RENDER_HEIGHT = "render_height";  // 0: the screen's own
 
     @Override
     protected void onCreate(Bundle state) {
@@ -42,6 +44,12 @@ public class PtActivity extends SDLActivity {
                     Log.e(TAG, "cannot set " + pair, e);
                 }
             }
+        }
+        int renderHeight = getSharedPreferences(PREFERENCES, MODE_PRIVATE).getInt(KEY_RENDER_HEIGHT, 0);
+        try {
+            Os.setenv("PT_RENDER_HEIGHT", Integer.toString(renderHeight), true);
+        } catch (ErrnoException e) {
+            Log.e(TAG, "cannot set the resolution", e);
         }
         if (BuildConfig.DEBUG && getIntent().getBooleanExtra(EXTRA_SELFTEST, false)) {
             try {

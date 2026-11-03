@@ -3946,6 +3946,16 @@ int RunGame(App& app, pt::Vfs& vfs) {
             float y = 0.0f;
             SDL_GetMouseState(&x, &y);
             pending_input.pointer = glm::vec2(x, y) * SDL_GetWindowPixelDensity(app.window);
+#ifdef PT_ANDROID
+            // the menus are laid out in the render size, which the launcher can make smaller than the window
+            int window_width = 0;
+            int window_height = 0;
+            SDL_GetWindowSize(app.window, &window_width, &window_height);
+            const VkExtent2D render_size = app.renderer.RenderExtent();
+            if (window_width > 0 && window_height > 0 && render_size.width > 0) {
+                pending_input.pointer = glm::vec2(x / window_width * render_size.width, y / window_height * render_size.height);
+            }
+#endif
             pending_input.pointer_valid = true;
         }
         if (const std::vector<int> set = game.TakePhotoSettingsRequest(); set.size() == 7 && photo_mode) {
@@ -6146,6 +6156,22 @@ int main(int argc, char** argv) {
             const uint32_t h = pinned ? g_clock_config.pinned_h : kSwitchSizes[g_switch_gfx.level].height;
             app.renderer.SetRenderExtent({w, h});
             pt::LogInfo("switch: scene render size {}x{}{}", w, h, pinned ? " (pinned)" : "");
+        }
+#endif
+#ifdef PT_ANDROID
+        // the launcher's resolution, as a height: the scene is rendered smaller, in the screen's proportions, and scaled up by the final pass
+        if (const char* chosen = std::getenv("PT_RENDER_HEIGHT"); chosen && app.window) {
+            int width = 0;
+            int height = 0;
+            SDL_GetWindowSizeInPixels(app.window, &width, &height);
+            const int wanted = std::atoi(chosen);
+            const int long_side = std::max(width, height);
+            const int short_side = std::min(width, height);
+            if (wanted > 0 && wanted < short_side) {
+                const uint32_t scaled = static_cast<uint32_t>(wanted * long_side / short_side) & ~1u;
+                app.renderer.SetRenderExtent({scaled, static_cast<uint32_t>(wanted)});
+                pt::LogInfo("android: scene render size {}x{}", scaled, wanted);
+            }
         }
 #endif
         const bool viewer = !options.stage.empty() || !options.texture_test.empty();
