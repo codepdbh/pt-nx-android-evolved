@@ -212,6 +212,7 @@ public class ImportActivity extends Activity {
             intent.putExtra(PtActivity.EXTRA_ARGS, getIntent().getStringExtra(PtActivity.EXTRA_ARGS));
         }
         if (BuildConfig.DEBUG) {
+            intent.putExtra(PtActivity.EXTRA_ENV, getIntent().getStringExtra(PtActivity.EXTRA_ENV));
             intent.putExtra(PtActivity.EXTRA_SELFTEST, getIntent().getBooleanExtra(PtActivity.EXTRA_SELFTEST, false));
         }
         startActivity(intent);

@@ -433,7 +433,31 @@ void Context::Shutdown() {
     instance = VK_NULL_HANDLE;
 }
 
+bool Context::RecreateSurface(SDL_Window* window) {
+    vkDeviceWaitIdle(device);
+    DestroySwapchain();
+    swapchain.handle = VK_NULL_HANDLE;
+    if (surface) {
+        vkDestroySurfaceKHR(instance, surface, nullptr);
+        surface = VK_NULL_HANDLE;
+    }
+    if (!SDL_Vulkan_CreateSurface(window, instance, nullptr, &surface)) {
+        LogWarn("vulkan: no surface yet: {}", SDL_GetError());
+        surface = VK_NULL_HANDLE;
+        return false;
+    }
+    VkBool32 present = VK_FALSE;
+    vkGetPhysicalDeviceSurfaceSupportKHR(physical, queue_family, surface, &present);
+    LogInfo("vulkan: surface recreated (present support {})", present != VK_FALSE);
+    return present != VK_FALSE;
+}
+
 bool Context::CreateSwapchain(uint32_t width, uint32_t height, bool vsync) {
+#ifdef PT_ANDROID
+    if (!surface) {
+        return false;  // the last RecreateSurface found no window: the renderer tries again
+    }
+#endif
     vkDeviceWaitIdle(device);
     vsync = vsync && !force_vsync_off;
     VkSurfaceCapabilitiesKHR caps;

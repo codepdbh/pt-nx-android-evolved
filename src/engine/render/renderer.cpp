@@ -425,7 +425,22 @@ bool Renderer::BeginFrame(bool present) {
                 return false;
             }
             if (!ctx_.CreateSwapchain(static_cast<uint32_t>(w), static_cast<uint32_t>(h), settings_.vsync)) {
+#ifdef PT_ANDROID
+                // The app was in the background: Android destroyed the window behind the VkSurface, which now reports size 0 or an error for good.
+                // A new surface on the new window, tried four times a second until there is one.
+                static uint64_t last_try = 0;
+                const uint64_t now = SDL_GetTicks();
+                if (now - last_try < 250) {
+                    return false;
+                }
+                last_try = now;
+                if (!ctx_.RecreateSurface(window_) ||
+                    !ctx_.CreateSwapchain(static_cast<uint32_t>(w), static_cast<uint32_t>(h), settings_.vsync)) {
+                    return false;
+                }
+#else
                 return false;
+#endif
             }
             DestroyTargets();
             if (render_extent_.width > 0 && render_extent_.height > 0) {

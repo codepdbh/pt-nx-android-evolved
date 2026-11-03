@@ -25,10 +25,24 @@ public class PtActivity extends SDLActivity {
     private static final String TAG = "PtActivity";
     static final String EXTRA_ARGS = "pt_args";
     static final String EXTRA_SELFTEST = "pt_selftest";
+    static final String EXTRA_ENV = "pt_env";
 
     @Override
     protected void onCreate(Bundle state) {
         PtPaths.ensureFolders(this);
+        // the renderer's PT_* test switches are environment variables: --es pt_env "PT_A=0,PT_B=1" (debug builds only)
+        String env = BuildConfig.DEBUG ? getIntent().getStringExtra(EXTRA_ENV) : null;
+        if (env != null) {
+            for (String pair : env.split(",")) {
+                String[] parts = pair.split("=", 2);
+                if (parts.length != 2) continue;
+                try {
+                    Os.setenv(parts[0].trim(), parts[1].trim(), true);
+                } catch (ErrnoException e) {
+                    Log.e(TAG, "cannot set " + pair, e);
+                }
+            }
+        }
         if (BuildConfig.DEBUG && getIntent().getBooleanExtra(EXTRA_SELFTEST, false)) {
             try {
                 Os.setenv("PT_SELFTEST", "1", true);

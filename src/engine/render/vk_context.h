@@ -69,6 +69,7 @@ public:
 
     bool CreateSwapchain(uint32_t width, uint32_t height, bool vsync);
     void DestroySwapchain();
+    bool RecreateSurface(SDL_Window* window);  // Android: the window behind the surface goes away in the background
     VkResult AcquireNextImage(VkSemaphore semaphore, uint32_t* index);
     VkResult QueuePresent(const VkPresentInfoKHR& info);
     const SwapchainHooks* SwapchainOwner() const { return swapchain_owner_; }
