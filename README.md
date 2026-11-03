@@ -14,7 +14,8 @@ P.T. (Silent Hills) ejecutándose de forma nativa en Android ARM64, con C++20, V
 | APK nativa ARM64 con el motor y la lógica del juego | Funciona |
 | Renderizado Vulkan 1.3 con texturas, luces y sombras | Funciona en el pasillo inicial |
 | Lectura de los archivos originales desde la carpeta `pt` | Funciona |
-| Launcher con estado de archivos y botón Jugar | Funciona; falta probar el selector de archivos |
+| Launcher con estado de archivos, resolución y botón Jugar | Funciona; falta probar el selector de archivos |
+| Reportar un problema a GitHub con los logs | Abre el formulario relleno; se envía con tu cuenta |
 | Joystick táctil, cámara táctil y botones | Movimiento comprobado; el resto, en pruebas |
 | Menús originales con cruceta y botones virtuales | Implementado, en pruebas |
 | Botón "Jack" para el evento de voz, sin micrófono | Implementado, sin probar en el evento |
@@ -26,7 +27,7 @@ P.T. (Silent Hills) ejecutándose de forma nativa en Android ARM64, con C++20, V
 ## Limitaciones conocidas
 
 - **Dispositivos:** solo se ha probado en un Samsung Galaxy S25 Ultra (Adreno 830, Android 17). Otros teléfonos pueden no funcionar. Sin soporte de Vulkan 1.3 y texturas BC, el juego avisa de lo que falta y no arranca.
-- **Rendimiento:** unos 40-48 fps en el pasillo en la prueba realizada, a la resolución completa de la pantalla y sin perfiles gráficos ni optimizaciones para móvil. No se ha medido en sesiones largas ni en todo el juego.
+- **Rendimiento:** unos 40-48 fps en el pasillo en la prueba realizada, a la resolución completa de la pantalla y sin perfiles gráficos ni optimizaciones para móvil. Puedes bajar la resolución en el launcher. No se ha medido en sesiones largas ni en todo el juego.
 - **Controles:** el tamaño y la posición de los botones todavía no se pueden configurar.
 - **Imagen:** el Adreno 830 genera algunos píxeles de luz inválidos cuyo origen aún no se conoce. La exposición ya los ignora, pero podrían verse como artefactos.
 
@@ -42,6 +43,10 @@ P.T. (Silent Hills) ejecutándose de forma nativa en Android ARM64, con C++20, V
 2. Copia los tres archivos a la carpeta `pt` de la memoria interna (`/storage/emulated/0/pt/`), o selecciónalos desde el launcher.
 3. Abre la app y activa **Acceso a todos los archivos** cuando te lo pida. Lo necesita para leer esa carpeta.
 4. Cuando los tres archivos aparezcan marcados, pulsa **Jugar**.
+
+## Reportar un problema
+
+Pulsa **Reportar un problema** en el launcher. Se abre un issue de GitHub ya rellenado con tu dispositivo, GPU, versión y las últimas líneas del log, y el log completo queda en el portapapeles. Revísalo antes de enviarlo, porque los issues son públicos. Necesitas una cuenta de GitHub.
 
 ## Controles táctiles
 

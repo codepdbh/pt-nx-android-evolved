@@ -30,3 +30,12 @@ The desktop and Switch builds were not rebuilt after the shared-file changes (`m
 Not run: file picker, gamepads, Jack button in its event, full playthrough, saves after restart.
 
 The desktop and Switch builds have still not been rebuilt after the shared-file changes.
+
+## 2026-11-03, same device, signed release build 0.1.1
+
+| Test | Result |
+|---|---|
+| Resolution selector | Pass; the log reports 1170x540 and 1560x720 |
+| Report button | Pass; opens the GitHub app's issue form filled in, log on the clipboard. Not sent |
+
+Not run: menu touches below native resolution, the report button with a browser instead of the GitHub app.

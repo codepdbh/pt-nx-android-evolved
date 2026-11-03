@@ -1,7 +1,9 @@
 package io.github.codepdbh.ptevolved;
 
 import android.app.Activity;
+import android.content.ActivityNotFoundException;
 import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Color;
@@ -9,6 +11,7 @@ import android.graphics.Outline;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.DocumentsContract;
@@ -29,6 +32,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.RandomAccessFile;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -40,6 +45,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class ImportActivity extends Activity {
     private static final int REQUEST_PICK = 1;
+    private static final String NEW_ISSUE = "https://github.com/codepdbh/pt-nx-android-evolved/issues/new";
+    private static final int CLIPBOARD_BYTES = 200 * 1024;  // more can fail: the clipboard travels through a size limited system call
+    private static final int URL_LOG_CHARS = 2500;          // GitHub refuses addresses much longer than the encoded form of this
     private static final int INK = Color.rgb(226, 226, 222);
     private static final int MUTED = Color.rgb(136, 136, 132);
     private static final int BLOOD = Color.rgb(164, 28, 28);
@@ -127,6 +135,12 @@ public class ImportActivity extends Activity {
         version.setPadding(0, dp(8), 0, 0);
         version.setGravity(Gravity.CENTER);
         brand.addView(version);
+        Button report = button("Reportar un problema", Color.rgb(28, 28, 30), Color.rgb(70, 70, 72));
+        report.setTextSize(12);
+        report.setOnClickListener(v -> reportProblem());
+        LinearLayout.LayoutParams reportParams = new LinearLayout.LayoutParams(dp(170), dp(34));
+        reportParams.topMargin = dp(10);
+        brand.addView(report, reportParams);
         root.addView(brand, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 2f));
 
         LinearLayout panel = new LinearLayout(this);
@@ -210,6 +224,55 @@ public class ImportActivity extends Activity {
         screen.setFitsSystemWindows(true);
         screen.addView(root, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
         setContentView(screen);
+    }
+
+    /** The end of the last run's log, or an empty string when there is none. */
+    private String readLog(int maxBytes) {
+        File log = new File(PtPaths.root(this), "logs/pt.log");
+        try (RandomAccessFile file = new RandomAccessFile(log, "r")) {
+            int size = (int) Math.min(file.length(), maxBytes);
+            byte[] data = new byte[size];
+            file.seek(file.length() - size);
+            file.readFully(data);
+            return new String(data, StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            return "";
+        }
+    }
+
+    private static String gpuLine(String log) {
+        for (String line : log.split("\n")) {
+            int at = line.indexOf("vulkan: using ");
+            if (at >= 0) return line.substring(at + 14).trim();
+        }
+        return "desconocida";
+    }
+
+    /**
+     * Opens GitHub's new issue form, filled in, for the player to read and send with their own account: the app holds no GitHub credentials,
+     * as anything inside an APK can be extracted. The whole log goes to the clipboard, as an address only has room for its end.
+     */
+    private void reportProblem() {
+        String log = readLog(CLIPBOARD_BYTES);
+        String gpu = gpuLine(log);
+        String tail = log.length() > URL_LOG_CHARS ? log.substring(log.length() - URL_LOG_CHARS) : log;
+        tail = tail.substring(Math.max(0, tail.indexOf('\n') + 1));
+        String body = "**Qué pasó:**\n\n\n**Qué estabas haciendo:**\n\n\n"
+                + "**Dispositivo:** " + Build.MANUFACTURER + " " + Build.MODEL + ", Android " + Build.VERSION.RELEASE + "\n"
+                + "**GPU:** " + gpu + "\n"
+                + "**Versión:** " + BuildConfig.VERSION_NAME + "\n\n"
+                + (log.isEmpty() ? "Sin log: el juego aún no se ha ejecutado.\n"
+                                 : "**Log completo:** se copió al portapapeles, pégalo aquí si cabe.\n\n**Últimas líneas:**\n```\n" + tail + "\n```\n");
+        if (!log.isEmpty()) {
+            ((ClipboardManager) getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("pt.log", log));
+        }
+        Uri address = Uri.parse(NEW_ISSUE + "?title=" + Uri.encode("[" + BuildConfig.VERSION_NAME + "] ") + "&body=" + Uri.encode(body));
+        try {
+            startActivity(new Intent(Intent.ACTION_VIEW, address));
+            status.setText("Revisa el formulario en GitHub antes de enviarlo: los issues son públicos.");
+        } catch (ActivityNotFoundException e) {
+            status.setText("No hay navegador para abrir GitHub. El log quedó copiado al portapapeles.");
+        }
     }
 
     private void chooseResolution(int height) {
