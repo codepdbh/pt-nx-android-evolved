@@ -9,6 +9,8 @@
     <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
 
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- the game files are in the "pt" folder of the shared storage, where the player can reach them -->
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
 
     <application
@@ -22,6 +24,7 @@
         <activity
             android:name=".ImportActivity"
             android:exported="true"
+            android:screenOrientation="sensorLandscape"
             android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

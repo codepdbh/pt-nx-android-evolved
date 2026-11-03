@@ -1,17 +1,18 @@
 package io.github.codepdbh.ptevolved;
 
 import android.content.Context;
+import android.os.Environment;
 
 import java.io.File;
 
-/** The private folders of the port, all below Context.getFilesDir(). */
+/** The game files are in the "pt" folder of the shared storage; settings, saves, logs and runtime files in private storage. */
 final class PtPaths {
     static final String[] GAME_FILES = {"chunk1.psarc", "texture.qar", "pathid_list_ps4.bin"};
 
     private PtPaths() {}
 
     static File root(Context context) { return new File(context.getFilesDir(), "pt"); }
-    static File game(Context context) { return new File(root(context), "game/CUSA01127"); }
+    static File game(Context context) { return new File(Environment.getExternalStorageDirectory(), "pt"); }
     /** What the engine calls the executable's folder: shaders/ and fonts/ unpacked from the APK. */
     static File runtime(Context context) { return new File(root(context), "runtime"); }
 
@@ -26,7 +27,7 @@ final class PtPaths {
 
     static void ensureFolders(Context context) {
         File root = root(context);
-        for (String name : new String[] {"game/CUSA01127", "save", "cache", "logs", "mods", "runtime"}) {
+        for (String name : new String[] {"save", "cache", "logs", "mods", "runtime"}) {
             new File(root, name).mkdirs();
         }
     }

@@ -16,3 +16,17 @@
 Importing files, any game content, touch, gamepads, pause and resume, rotation, `assembleRelease`, the engine's unit tests on Android.
 
 The desktop and Switch builds were not rebuilt after the shared-file changes (`main.cpp`, `vk_context`, `renderer.cpp`, `log.cpp`, `resource_path.cpp`, `anim_test.cpp`, `enhanced_textures.cpp`).
+
+## 2026-11-03, same device, signed release build 0.1.0
+
+| Test | Result |
+|---|---|
+| Launcher | Pass; shows the three files in `pt`, starts the game with Jugar |
+| Scene rendering | Pass; textures, lights, shadows, subtitles in screenshots |
+| Touch stick | Pass; player position changed (debug build) |
+| Back to the game after leaving the app | Pass once; new Vulkan surface |
+| Frame rate in the hallway | 40-48 fps, 20-24 ms GPU, 2.4 GB PSS |
+
+Not run: file picker, gamepads, Jack button in its event, full playthrough, saves after restart.
+
+The desktop and Switch builds have still not been rebuilt after the shared-file changes.

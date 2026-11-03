@@ -71,6 +71,7 @@
 #include "engine/platform/settings.h"
 #include "engine/platform/graphics_presets.h"
 #include "engine/platform/virtual_pad.h"
+#include "engine/platform/touch_controls.h"
 #include "engine/voice/microphone.h"
 #include "engine/voice/voice_recognizer.h"
 #include "game/archive.h"
@@ -678,6 +679,9 @@ struct App {
     std::unique_ptr<pt::mods::ModSet> mods;
     std::unique_ptr<pt::xr::Host> xr;
     pt::LiveSplitClient livesplit;
+#ifdef PT_ANDROID
+    pt::TouchControls touch;
+#endif
 };
 
 void MountMods(App& app) {
@@ -3194,6 +3198,17 @@ bool PumpEvents(App& app, pt::InputDevice* input, bool& running) {
     }
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
+#ifdef PT_ANDROID
+        app.touch.ProcessEvent(event);
+        // SDL also reports a touch as a mouse: a click for the menus, but not in play and not on the on-screen buttons
+        if ((event.type == SDL_EVENT_MOUSE_BUTTON_DOWN || event.type == SDL_EVENT_MOUSE_BUTTON_UP) && event.button.which == SDL_TOUCH_MOUSEID &&
+            (app.touch.GetMode() == pt::TouchControls::Mode::Play || app.touch.HitsButton(event.button.x, event.button.y))) {
+            continue;
+        }
+        if (event.type == SDL_EVENT_MOUSE_MOTION && event.motion.which == SDL_TOUCH_MOUSEID && app.touch.GetMode() == pt::TouchControls::Mode::Play) {
+            continue;
+        }
+#endif
         ImGui_ImplSDL3_ProcessEvent(&event);
         if (input) {
             input->ProcessEvent(event);
@@ -3850,8 +3865,12 @@ int RunGame(App& app, pt::Vfs& vfs) {
             }
             tab_was_down = keys[SDL_SCANCODE_TAB];
             const bool photo_pointer = photo_mode && photo_overlay && !(SDL_GetMouseState(nullptr, nullptr) & SDL_BUTTON_RMASK);
+#ifdef PT_ANDROID
+            const bool want_capture = false;  // the camera follows a finger, there is no mouse to hold
+#else
             const bool want_capture = !show_debug && !show_settings && !(ui_ready && ui.MenuOpen()) && !photo_pointer && !vr &&
                                       (SDL_GetWindowFlags(app.window) & SDL_WINDOW_INPUT_FOCUS);
+#endif
             if (want_capture != mouse_captured) {
                 SDL_SetWindowRelativeMouseMode(app.window, want_capture);
                 mouse_captured = want_capture;
@@ -3862,10 +3881,32 @@ int RunGame(App& app, pt::Vfs& vfs) {
         const pt::MouseUse mouse_use = mouse_captured || (!app.window && !menu_open) ? pt::MouseUse::Look
                                        : menu_open && !show_settings                   ? pt::MouseUse::Menu
                                                                                        : pt::MouseUse::None;
+#ifdef PT_ANDROID
+        const bool touch_hud = app.window && input.GamepadCount() == 0;  // a connected pad hides the on-screen controls
+        if (touch_hud) {
+            int width = 0;
+            int height = 0;
+            SDL_GetWindowSize(app.window, &width, &height);
+            SDL_Rect safe{0, 0, width, height};
+            SDL_GetWindowSafeArea(app.window, &safe);
+            app.touch.SetVoiceAvailable(game.VoiceListening() && !game.Paused() && !menu_open);
+            app.touch.SetViewport(static_cast<float>(width), static_cast<float>(height), static_cast<float>(safe.x), static_cast<float>(safe.y),
+                                  static_cast<float>(safe.x + safe.w), static_cast<float>(safe.y + safe.h));
+            app.touch.SetMode(menu_open ? pt::TouchControls::Mode::Menu : pt::TouchControls::Mode::Play);
+            input.SetTouch(app.touch.Take());
+        } else {
+            app.touch.SetMode(pt::TouchControls::Mode::Off);
+        }
+#endif
         pt::InputState polled = pads ? input.Poll(keyboard_free, mouse_use, !show_settings) : pt::InputState{};
         if (options.forced_prompts) {
             polled.prompts = *options.forced_prompts;
         }
+#ifdef PT_ANDROID
+        if (touch_hud) {
+            polled.prompts = pt::PromptStyle{pt::PromptDevice::PlayStation, {}};  // the on-screen buttons carry the PlayStation shapes, not keyboard keys
+        }
+#endif
         if (vr) {
             vr->ApplyControls(game, polled, ui_ready && ui.MenuOpen(), vr->ScreenMode(game), dt);
         }
@@ -4224,7 +4265,7 @@ int RunGame(App& app, pt::Vfs& vfs) {
             // Both triggers together say "Jack" while the game listens for it (the final puzzle). The Switch has no microphone and no
             // keyboard, so there it is always on; elsewhere it comes with the keyboard key (pt.ini [voice] key), as the PC port's
             // "Assign J / L2 + R2 for the microphone trigger".
-#ifdef PT_SWITCH
+#if defined(PT_SWITCH) || defined(PT_ANDROID)
             const bool pad_jack = polled.voice_keyword_pressed;
 #else
             const bool pad_jack = polled.voice_keyword_pressed && voice_key != SDL_SCANCODE_UNKNOWN;
@@ -4369,6 +4410,9 @@ int RunGame(App& app, pt::Vfs& vfs) {
             }
 #ifdef PT_SWITCH
             if (g_switch_gfx.overlay) DrawSwitchOverlay(app);
+#endif
+#ifdef PT_ANDROID
+            app.touch.Draw(ImGui::GetForegroundDrawList());
 #endif
             ImGui::Render();
         }
@@ -5838,6 +5882,11 @@ int main(int argc, char** argv) {
 #ifdef PT_SWITCH
     pt::LogInfo("switch: {} MB of memory for this process (about 3200 = title takeover mode, far less = applet mode: hold R when starting)", SDL_GetSystemRAM());
     pt::LogInfo("switch: SDL_Init");
+#endif
+#ifdef PT_ANDROID
+    SDL_SetHint(SDL_HINT_ANDROID_TRAP_BACK_BUTTON, "1");  // Back opens the pause menu (InputDevice::ProcessEvent)
+    SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "1");
+    SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");  // SDL sets the Activity's orientation itself, over the manifest's
 #endif
     if (!SDL_Init(options.headless ? (options.virtual_pads ? SDL_INIT_GAMEPAD : 0) : (SDL_INIT_VIDEO | SDL_INIT_GAMEPAD | SDL_INIT_AUDIO))) {
         pt::LogError("SDL_Init: {}", SDL_GetError());

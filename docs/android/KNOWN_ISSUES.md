@@ -1,12 +1,9 @@
 # Known issues
 
-- Game files are not on the test device. `tools`' documented route for a fake PKG (`installer/Extractor` with LibOrbisPkg) has not been run, and whether the local PKG opens with it is unknown. A store PKG is refused by design.
-- Surface loss on pause and resume is not handled.
-- No touch controls.
+- Adreno 830 produces NaN pixels in the diffuse light buffer, source unknown. They once made the whole picture a flat sky colour through the exposure, which now ignores them; they could still show as artefacts or spread through bloom.
+- The file picker in the launcher has not been run with real files.
+- Only `chunk1.psarc` has its signature checked by the launcher. A wrong `texture.qar` is only caught when the engine mounts it.
+- The on-screen controls cannot be configured yet.
 - The log reports the platform as "linux" (`update::Platform()`).
-- The self test's window is not fullscreen: system bars stay visible. The game path's fullscreen is untested.
 - The process stays cached after the activity exits. Relaunching in that process is untested.
-- `ImportActivity` checks a signature only for `chunk1.psarc`. A wrong `texture.qar` is only caught when the engine mounts it, and the player then has no way back to the import screen.
-- `assets/icono.png` has no adaptive icon version. Its small text will be hard to read at launcher size.
-
-- Adreno 830 produces NaN pixels in the diffuse light buffer. Their source is not found: the exposure ignores them now, but they could still show in the image or spread through bloom.
+- Enhanced textures and microphone recognition are unavailable.

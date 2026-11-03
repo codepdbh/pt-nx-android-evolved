@@ -22,3 +22,9 @@ adb logcat -s pt:*
 ```
 
 Starts the renderer and scene renderer, presents 300 frames, plays a tone and exits.
+
+## Release signing
+
+`assembleRelease` signs with `android/keystore.properties` when that file exists (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`). It and the keystore are ignored by Git. Keep a backup: an update signed with another key cannot install over an existing app.
+
+The self test and the `pt_env` and `pt_args` extras work in debug builds only.

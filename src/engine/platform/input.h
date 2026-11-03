@@ -9,6 +9,8 @@
 #include <string_view>
 #include <vector>
 
+#include "engine/platform/touch_controls.h"
+
 union SDL_Event;
 struct SDL_Gamepad;
 
@@ -148,6 +150,7 @@ public:
     const PromptStyle& Prompts() const { return prompts_; }
     void InjectKey(uint32_t scancode, bool down);
     void InjectMouseButton(uint8_t button, bool down);
+    void SetTouch(const TouchInput& touch) { touch_ = touch; }  // read by the next Poll
 
     InputSettings settings;
 
@@ -172,6 +175,7 @@ private:
     void UpdateRumble();
 
     std::vector<Pad> pads_;
+    TouchInput touch_;
     uint64_t use_counter_ = 0;
     float mouse_dx_ = 0.0f;
     float mouse_dy_ = 0.0f;

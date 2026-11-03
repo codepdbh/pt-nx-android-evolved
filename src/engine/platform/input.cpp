@@ -463,6 +463,11 @@ void InputDevice::ProcessEvent(const SDL_Event& event) {
         any_edge_ = true;
         last_from_gamepad_ = false;
         UsePrompts(PromptStyle{}, 0);
+#ifdef PT_ANDROID
+        if (event.key.scancode == SDL_SCANCODE_AC_BACK) {
+            pause_edge_ = true;  // the system's Back: the pause menu, not leaving the app
+        }
+#endif
         for (const KeyBinding& binding : kKeyBindings) {
             if (binding.scancode == 0 || binding.scancode != event.key.scancode) {
                 continue;
@@ -643,6 +648,17 @@ InputState InputDevice::Poll(bool keyboard_free, MouseUse mouse, bool pads_free)
             right = r;
         }
     }
+    // the on-screen controls count as one more pad (engine/platform/touch_controls.h)
+    if (pads_free) {
+        pad_raw |= touch_.raw;
+        if (glm::length(touch_.move) > glm::length(left)) {
+            left = touch_.move;
+        }
+        // a dense screen: a mouse's sensitivity per pixel would turn too slowly
+        state.mouse_look += touch_.look * settings.mouse_sensitivity * 1.6f;
+    }
+    state.voice_keyword_pressed |= touch_.voice;
+    touch_ = TouchInput{};
     if (glm::length(left) > glm::length(move)) {
         state.left_stick = left;
         state.left_stick_from_pad = true;
