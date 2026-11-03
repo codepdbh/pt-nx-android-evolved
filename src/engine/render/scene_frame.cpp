@@ -687,6 +687,14 @@ void SceneRenderer::PrepareFrame(const Camera& camera, const std::vector<DrawIte
         stats_.models_in_view = in_view;
         stats_.models_occluded = occluded;
         stats_.triangles_occluded = occluded_triangles;
+#ifdef PT_ANDROID
+        // test switches: PT_DEBUG_VIEW=<DebugView> shows a G-buffer channel, PT_DRAW_LOG logs what the camera sees
+        if (const char* view = std::getenv("PT_DEBUG_VIEW")) debug_view = static_cast<DebugView>(std::atoi(view));
+        if (static const bool draw_log = std::getenv("PT_DRAW_LOG") != nullptr; draw_log && frame_counter_ % 120 == 0) {
+            LogInfo("drawlog: eye {:.2f} {:.2f} {:.2f}, {} draws, {} in view, {} occluded", camera.position.x, camera.position.y, camera.position.z,
+                    draws_.size(), in_view, occluded);
+        }
+#endif
     }
     for (const SceneLight& l : lighting.lights) {
         if (static const char* light_only = std::getenv("PT_LIGHT_ONLY"); light_only && l.name.find(light_only) == std::string::npos) {
