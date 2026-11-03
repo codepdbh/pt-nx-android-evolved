@@ -34,6 +34,12 @@
         </activity>
 
         <activity
+            android:name=".LicensesActivity"
+            android:exported="false"
+            android:screenOrientation="sensorLandscape"
+            android:theme="@android:style/Theme.DeviceDefault.NoActionBar" />
+
+        <activity
             android:name=".PtActivity"
             android:exported="false"
             android:launchMode="singleTask"

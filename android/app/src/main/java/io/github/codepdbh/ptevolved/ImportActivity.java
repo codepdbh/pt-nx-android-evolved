@@ -141,6 +141,11 @@ public class ImportActivity extends Activity {
         LinearLayout.LayoutParams reportParams = new LinearLayout.LayoutParams(dp(170), dp(34));
         reportParams.topMargin = dp(10);
         brand.addView(report, reportParams);
+        Button licenses = button("Licencias", Color.rgb(8, 8, 9), 0);
+        licenses.setTextColor(MUTED);
+        licenses.setTextSize(12);
+        licenses.setOnClickListener(v -> startActivity(new Intent(this, LicensesActivity.class)));
+        brand.addView(licenses, new LinearLayout.LayoutParams(dp(170), dp(30)));
         root.addView(brand, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 2f));
 
         LinearLayout panel = new LinearLayout(this);

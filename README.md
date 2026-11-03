@@ -85,4 +85,8 @@ Este port se ha creado **con ayuda de herramientas de IA**, igual que el port de
 
 El resto de componentes y sus licencias: [README-ADVANCED.md](README-ADVANCED.md#credits-and-licences) y [docs/android/LICENSES.md](docs/android/LICENSES.md).
 
-P.T. es © Konami. Este es un proyecto de fans, sin afiliación ni respaldo de Konami.
+## Licencia
+
+El código propio del port es MIT ([LICENSE](LICENSE)). Los componentes de terceros conservan sus licencias: la lista está en [docs/android/LICENSES.md](docs/android/LICENSES.md) y sus textos estarán en el botón **Licencias** del launcher a partir de la próxima versión. La APK de Android no enlaza nxvk ni lsfg-vk, así que la licencia GPL del binario de Switch no se le aplica.
+
+P.T. es © Konami. Este es un proyecto de fans, sin afiliación ni respaldo de Konami. No incluye archivos del juego.

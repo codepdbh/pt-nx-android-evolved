@@ -99,6 +99,7 @@ tasks.register("packRuntimeAssets") {
     def fontDir = new File(repoRoot, "assets/fonts")
     inputs.dir(shaderDir)
     inputs.dir(fontDir)
+    inputs.dir(new File(repoRoot, "third_party/android_notices"))
     outputs.dir(generatedAssets)
     doLast {
         def glslc = new File(android.ndkDirectory, "shader-tools/windows-x86_64/glslc.exe")
@@ -117,6 +118,30 @@ tasks.register("packRuntimeAssets") {
             from fontDir
             include "*.ttf", "OFL-*.txt"
             into new File(generatedAssets, "fonts")
+        }
+        // the Licencias screen: docs/android/LICENSES.md
+        def notices = new File(generatedAssets, "licenses")
+        copy {
+            from new File(repoRoot, "third_party/android_notices")
+            include "*.txt"
+            into notices
+        }
+        copy {
+            from fontDir
+            include "OFL-*.txt"
+            into notices
+        }
+        copy {
+            from new File(repoRoot, "LICENSE")
+            rename { "P.T. Android Evolved (MIT).txt" }
+            into notices
+        }
+        def llvm = fileTree(new File(android.ndkDirectory, "toolchains/llvm/prebuilt")) { include "*/NOTICE" }
+        if (llvm.isEmpty()) throw new GradleException("the NDK's LLVM NOTICE was not found: libc++ goes into the APK and needs it")
+        copy {
+            from llvm.singleFile
+            rename { "LLVM-NDK-NOTICE.txt" }
+            into notices
         }
     }
 }
