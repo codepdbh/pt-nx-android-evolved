@@ -21,7 +21,9 @@ void main() {
     vec4 normal = ImgFetch(IMG_NORMAL, pixel);
     vec4 material = ImgFetch(IMG_MATERIAL, pixel);
     vec3 c = vec3(0.0);
-    if (mode == 1u) {
+    if (mode == 20u) {
+        c = ImgFetch(IMG_HDR, pixel).rgb * v.exposure.x;  // the lit scene before any post effect
+    } else if (mode == 1u) {
         c = depth > 0.0 ? DecodeNormal(normal.xyz) * 0.5 + 0.5 : vec3(0.0);
     } else if (mode == 2u || mode == 3u) {
         c = albedo.rgb;

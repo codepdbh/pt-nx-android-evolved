@@ -1357,6 +1357,9 @@ void SceneRenderer::ReadMeasurements(FrameSlot& slot, float dt, const ExposureSe
         return;
     }
     const float measured = static_cast<float>(sum / count);
+    if (!std::isfinite(measured)) {
+        return;  // a bad reading must not reach ev_: std::clamp below would keep a NaN for good
+    }
     stats_.luminance = measured;
     if (!adaptation_valid_ || !toggles.adaptation || !lighting_ || !lighting_->valid) {
         return;

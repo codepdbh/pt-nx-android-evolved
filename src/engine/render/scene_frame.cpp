@@ -2420,6 +2420,18 @@ uint32_t SceneRenderer::MirrorLights(const Draw& draw, glm::vec4 aux[2]) const {
 
 void SceneRenderer::RecordForward(VkCommandBuffer cmd, const ViewSetup& view, RenderTarget& output) {
     const bool main_view = &output == &hdr_;
+#ifdef PT_ANDROID
+    if (static const bool off = std::getenv("PT_NO_FORWARD") != nullptr; off) {
+        return;
+    }
+    if (static const bool log = std::getenv("PT_DRAW_LOG") != nullptr; log && frame_counter_ % 120 == 0) {
+        for (const Draw& d : draws_) {
+            if ((d.sub->pass == RenderPass::Unlit || d.sub->pass == RenderPass::Transparent) && Visible(d, view)) {
+                LogInfo("drawlog: forward {} kind {} radius {:.1f}", d.mesh->name, static_cast<int>(d.sub->kind), d.radius);
+            }
+        }
+    }
+#endif
     bool any = false;
     for (const Draw& d : draws_) {
         const RenderPass pass = d.sub->pass;
@@ -2962,7 +2974,7 @@ void SceneRenderer::SettleExposure(const ExposureSettings& settings) {
         count += partial[i].y;
     }
     adaptation_valid_ = true;
-    if (count <= 0.0) {
+    if (count <= 0.0 || !std::isfinite(sum)) {
         return;
     }
     const float raw = static_cast<float>(sum / count) / std::max(exposure_, 1.0e-12f);

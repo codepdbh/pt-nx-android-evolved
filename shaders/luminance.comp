@@ -27,7 +27,11 @@ void main() {
             if (all(lessThan(p, size))) {
                 float depth = ImgFetch(IMG_DEPTH, p).x;
                 if (depth > 0.0) {
-                    acc += vec2(max(0.0, Luma709(ImgFetch(IMG_DIFFUSE, p).rgb)), 1.0);
+                    // one NaN would make the average, and through it the camera's exposure, NaN for good (seen on Adreno 830)
+                    float luma = Luma709(ImgFetch(IMG_DIFFUSE, p).rgb);
+                    if (!isnan(luma) && !isinf(luma)) {
+                        acc += vec2(max(0.0, luma), 1.0);
+                    }
                 }
             }
         }
