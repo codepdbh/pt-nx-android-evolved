@@ -49,6 +49,10 @@ add_subdirectory("${PT_SDL_DIR}" "${CMAKE_BINARY_DIR}/_deps/sdl3-build" EXCLUDE_
 file(GLOB LUA51_SOURCES ${lua51_SOURCE_DIR}/src/*.c)
 list(FILTER LUA51_SOURCES EXCLUDE REGEX ".*/(lua|luac|print)\\.c$")
 
+# Lua keeps a string's bytes right after its TString header: bionic's FORTIFY takes the header for the whole buffer, and the collector's
+# strchr on a weak table's mode aborts the process ("strchr: prevented read past end of buffer"). A false positive, so off for Lua only.
+set_source_files_properties(${LUA51_SOURCES} PROPERTIES COMPILE_OPTIONS "-U_FORTIFY_SOURCE")
+
 add_library(pt_thirdparty STATIC
   ${volk_SOURCE_DIR}/volk.c
   ${imgui_SOURCE_DIR}/imgui.cpp
