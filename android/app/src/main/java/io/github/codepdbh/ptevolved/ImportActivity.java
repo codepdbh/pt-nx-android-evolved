@@ -43,7 +43,7 @@ public class ImportActivity extends Activity {
     protected void onCreate(Bundle state) {
         super.onCreate(state);
         PtPaths.ensureFolders(this);
-        if (PtPaths.gameFilesPresent(this)) {
+        if (PtPaths.gameFilesPresent(this) || (BuildConfig.DEBUG && getIntent().getBooleanExtra(PtActivity.EXTRA_SELFTEST, false))) {
             startGame();
             return;
         }
@@ -210,6 +210,9 @@ public class ImportActivity extends Activity {
         Intent intent = new Intent(this, PtActivity.class);
         if (BuildConfig.DEBUG && getIntent().hasExtra(PtActivity.EXTRA_ARGS)) {
             intent.putExtra(PtActivity.EXTRA_ARGS, getIntent().getStringExtra(PtActivity.EXTRA_ARGS));
+        }
+        if (BuildConfig.DEBUG) {
+            intent.putExtra(PtActivity.EXTRA_SELFTEST, getIntent().getBooleanExtra(PtActivity.EXTRA_SELFTEST, false));
         }
         startActivity(intent);
         finish();

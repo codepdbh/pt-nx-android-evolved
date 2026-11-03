@@ -450,7 +450,7 @@ bool Renderer::BeginFrame(bool present) {
                 swapchain_dirty_ = true;
                 return false;
             }
-            if (acquire == VK_SUBOPTIMAL_KHR) {
+            if (vk::SwapchainStale(acquire)) {
                 swapchain_dirty_ = true;
             }
         }
@@ -672,7 +672,7 @@ void Renderer::EndFrame(bool draw_ui) {
             frame_index_ = (frame_index_ + 1) % kFramesInFlight;
             return;
         }
-        if (acquire == VK_SUBOPTIMAL_KHR) {
+        if (vk::SwapchainStale(acquire)) {
             swapchain_dirty_ = true;
         }
         target_image = ctx_.swapchain.images[image_index_];
@@ -790,7 +790,7 @@ void Renderer::EndFrame(bool draw_ui) {
         timing_.present_ms = std::chrono::duration<float, std::milli>(std::chrono::steady_clock::now() - present_start).count();
         streamline::SetMarker(streamline::Marker::PresentEnd);
         ctx_.CheckDeviceLost(result, "present");
-        if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+        if (vk::SwapchainStale(result)) {
             swapchain_dirty_ = true;
         }
     }
@@ -808,7 +808,7 @@ void Renderer::EndFrame(bool draw_ui) {
         VkSemaphoreSubmitInfo second_wait{VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO};
         VkSemaphoreSubmitInfo second_signal{VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO};
         if (have_image) {
-            if (acquire2 == VK_SUBOPTIMAL_KHR) {
+            if (vk::SwapchainStale(acquire2)) {
                 swapchain_dirty_ = true;
             }
             VkCommandBuffer cmd2 = frame.present_cmd2;
@@ -866,7 +866,7 @@ void Renderer::EndFrame(bool draw_ui) {
             timing_.present_ms += std::chrono::duration<float, std::milli>(std::chrono::steady_clock::now() - present_start).count();
             ++presents;
             ctx_.CheckDeviceLost(result, "present");
-            if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+            if (vk::SwapchainStale(result)) {
                 swapchain_dirty_ = true;
             }
         }

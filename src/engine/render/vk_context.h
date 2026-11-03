@@ -12,6 +12,16 @@ namespace pt::vk {
 
 class Context;
 
+// Whether an acquire or present result asks for a new swapchain. On Android VK_SUBOPTIMAL_KHR only says the compositor rotates the image
+// (the identity transform CreateSwapchain picks): a new swapchain would be just as suboptimal, every frame.
+inline bool SwapchainStale(VkResult result) {
+#ifdef PT_ANDROID
+    return result == VK_ERROR_OUT_OF_DATE_KHR;
+#else
+    return result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR;
+#endif
+}
+
 class ContextHooks {
 public:
     virtual ~ContextHooks() = default;

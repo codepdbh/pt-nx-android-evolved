@@ -3,6 +3,8 @@ package io.github.codepdbh.ptevolved;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.os.Bundle;
+import android.system.ErrnoException;
+import android.system.Os;
 import android.util.Log;
 
 import org.libsdl.app.SDLActivity;
@@ -22,10 +24,18 @@ import java.util.List;
 public class PtActivity extends SDLActivity {
     private static final String TAG = "PtActivity";
     static final String EXTRA_ARGS = "pt_args";
+    static final String EXTRA_SELFTEST = "pt_selftest";
 
     @Override
     protected void onCreate(Bundle state) {
         PtPaths.ensureFolders(this);
+        if (BuildConfig.DEBUG && getIntent().getBooleanExtra(EXTRA_SELFTEST, false)) {
+            try {
+                Os.setenv("PT_SELFTEST", "1", true);
+            } catch (ErrnoException e) {
+                Log.e(TAG, "cannot request the self test", e);
+            }
+        }
         try {
             unpackRuntimeAssets();
         } catch (IOException | PackageManager.NameNotFoundException e) {

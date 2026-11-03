@@ -5413,10 +5413,10 @@ bool WouldOpenWindow(const Options& options) {
              !options.fox2_test.empty() || options.list_pads);
 }
 
-#ifdef PT_SWITCH
+#if defined(PT_SWITCH) || defined(PT_ANDROID)
 // The console build runs this instead of exiting when the game files are not on the SD card: the real renderer on nxvk, a few seconds of
 // presented frames and a short tone. What worked and what did not is in the log (stderr, which `nxlink -s` streams), so the graphics and
-// audio paths can be checked without a game dump.
+// audio paths can be checked without a game dump. Android debug builds run it on request (PT_SELFTEST, set by PtActivity).
 int RunSwitchSelfTest(App& app) {
     pt::LogInfo("selftest: the game files were not found, checking graphics and audio instead");
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD | SDL_INIT_AUDIO)) {
@@ -5438,6 +5438,12 @@ int RunSwitchSelfTest(App& app) {
         vkGetPhysicalDeviceProperties(app.renderer.Context().physical, &properties);
         pt::LogInfo("selftest: renderer up on '{}', Vulkan {}.{}.{}", properties.deviceName, VK_API_VERSION_MAJOR(properties.apiVersion),
                     VK_API_VERSION_MINOR(properties.apiVersion), VK_API_VERSION_PATCH(properties.apiVersion));
+#ifdef PT_ANDROID
+        // the scene renderer's start-up on this driver: its shaders and resources, without game data
+        const uint64_t scene_start = SDL_GetTicks();
+        const bool scene_ok = app.textures.Init(app.renderer.Context()) && app.scene.Init(app.renderer, app.textures);
+        pt::LogInfo("selftest: scene renderer {} in {} ms", scene_ok ? "started" : "FAILED", SDL_GetTicks() - scene_start);
+#endif
         pt::audio::AudioOutput tone;
         double phase = 0.0;
         const bool audio_ok = tone.Open(48000, [&phase](float* out, uint32_t frames) {
@@ -5475,8 +5481,15 @@ int RunSwitchSelfTest(App& app) {
                     elapsed ? 1000.0 * presented / static_cast<double>(elapsed) : 0.0);
         tone.Close();
         vkDeviceWaitIdle(app.renderer.Context().device);
+#ifdef PT_ANDROID
+        if (scene_ok) app.scene.Shutdown();
+        app.textures.Shutdown();
+#endif
         app.renderer.Shutdown();
         result = presented > 0 ? 0 : 1;
+#ifdef PT_ANDROID
+        if (!scene_ok) result = 1;
+#endif
     } else {
         pt::LogError("selftest: the renderer could not start (see the lines above)");
     }
@@ -5787,6 +5800,11 @@ int main(int argc, char** argv) {
         pt::VirtualPads::UseOnlyVirtualDevices();
     }
 
+#ifdef PT_ANDROID
+    if (std::getenv("PT_SELFTEST")) {
+        return RunSwitchSelfTest(app);
+    }
+#endif
     pt::Vfs vfs;
     const std::filesystem::path game_dir = FindGameDir(options);
     if (game_dir != options.game_dir) {
