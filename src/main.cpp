@@ -5899,12 +5899,16 @@ int main(int argc, char** argv) {
             // first run on the console: the Low preset (no ray tracing, light effects), saved as the starting point
             pt::ApplyGraphicsPreset(app.settings, pt::GraphicsPreset::Low, false);
 #endif
+#ifdef PT_ANDROID
+            pt::ApplyGraphicsPreset(app.settings, pt::GraphicsPreset::Low, false);  // first run: the cheapest start, the player can raise it
+            app.settings.display.fullscreen = 1;
+#endif
             pt::SaveAppSettings(app.settings_path, app.settings);
         }
 #ifdef PT_SWITCH
         pt::LogInfo("switch: settings loaded from {}", app.settings_path.string());
 #endif
-#ifndef PT_SWITCH
+#if !defined(PT_SWITCH) && !defined(PT_ANDROID)
         // the console build has no HTTP (src/platform/switch/switch_stubs.cpp): there is no update to check for
         if (app.settings.network.check_updates && !options.no_update_check) {
             app.updates.Start();
@@ -5985,6 +5989,14 @@ int main(int argc, char** argv) {
     pt::LogInfo("switch: starting the renderer (Vulkan on nxvk)");
 #endif
     const bool renderer_ready = app.renderer.Init(app.window, settings);
+#ifdef PT_ANDROID
+    if (!renderer_ready) {
+        const std::string& missing = app.renderer.Context().unsupported;
+        const std::string text = missing.empty() ? std::string("Vulkan could not be started on this device. See logs/pt.log.")
+                                                 : "This device's GPU does not have what the game needs:\n" + missing;
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "P.T.", text.c_str(), app.window);
+    }
+#endif
     if (renderer_ready && test_device_lost) {
         app.renderer.Context().CheckDeviceLost(VK_ERROR_DEVICE_LOST, "PT_TEST_CRASH");
     }

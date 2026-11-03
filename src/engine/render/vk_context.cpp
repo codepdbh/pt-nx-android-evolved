@@ -177,6 +177,7 @@ bool Context::Init(SDL_Window* window, bool validation) {
         }
     }
     if (!physical) {
+        unsupported = "Vulkan 1.3";
         LogError("vulkan: no Vulkan 1.3 device with a graphics queue");
         return false;
     }
@@ -197,6 +198,49 @@ bool Context::Init(SDL_Window* window, bool validation) {
     properties.limits.timestampPeriod *= 31.25f / 19.2f;
     LogInfo("vulkan: timestamp period corrected for the Tegra X1 timer: {:.4f} ns", properties.limits.timestampPeriod);
 #endif
+
+    // what the renderer cannot run without: named in the log and to the player, rather than a bare vkCreateDevice failure
+    {
+        VkPhysicalDeviceVulkan13Features has13{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES};
+        VkPhysicalDeviceVulkan12Features has12{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES};
+        has12.pNext = &has13;
+        VkPhysicalDeviceFeatures2 has{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
+        has.pNext = &has12;
+        vkGetPhysicalDeviceFeatures2(physical, &has);
+        const struct {
+            const char* name;
+            VkBool32 present;
+        } required[] = {
+            {"dynamicRendering", has13.dynamicRendering},
+            {"synchronization2", has13.synchronization2},
+            {"shaderDemoteToHelperInvocation", has13.shaderDemoteToHelperInvocation},
+            {"descriptorIndexing", has12.descriptorIndexing},
+            {"runtimeDescriptorArray", has12.runtimeDescriptorArray},
+            {"shaderSampledImageArrayNonUniformIndexing", has12.shaderSampledImageArrayNonUniformIndexing},
+            {"descriptorBindingPartiallyBound", has12.descriptorBindingPartiallyBound},
+            {"descriptorBindingVariableDescriptorCount", has12.descriptorBindingVariableDescriptorCount},
+            {"descriptorBindingSampledImageUpdateAfterBind", has12.descriptorBindingSampledImageUpdateAfterBind},
+            {"descriptorBindingUpdateUnusedWhilePending", has12.descriptorBindingUpdateUnusedWhilePending},
+            {"descriptorBindingStorageBufferUpdateAfterBind", has12.descriptorBindingStorageBufferUpdateAfterBind},
+            {"timelineSemaphore", has12.timelineSemaphore},
+            {"scalarBlockLayout", has12.scalarBlockLayout},
+            {"samplerAnisotropy", has.features.samplerAnisotropy},
+            {"textureCompressionBC", has.features.textureCompressionBC},
+            {"fillModeNonSolid", has.features.fillModeNonSolid},
+            {"shaderInt16", has.features.shaderInt16},
+            {"shaderClipDistance", has.features.shaderClipDistance},
+        };
+        unsupported.clear();
+        for (const auto& feature : required) {
+            if (!feature.present) {
+                unsupported += unsupported.empty() ? feature.name : std::string(", ") + feature.name;
+            }
+        }
+        if (!unsupported.empty()) {
+            LogError("vulkan: {} lacks required features: {}", properties.deviceName, unsupported);
+            return false;
+        }
+    }
 
     VkPhysicalDeviceVulkan13Features features13{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES};
     features13.dynamicRendering = VK_TRUE;
@@ -441,8 +485,16 @@ bool Context::CreateSwapchain(uint32_t width, uint32_t height, bool vsync) {
     info.imageArrayLayers = 1;
     info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+#ifdef PT_ANDROID
+    // A phone's panel is portrait, so currentTransform says "rotated" in landscape. The renderer draws upright: identity, and the system
+    // compositor rotates (one more GPU pass; rendering rotated to save it is an optimization for later, docs/android/PERFORMANCE.md).
+    info.preTransform = (caps.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) ? VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR : caps.currentTransform;
+#else
     info.preTransform = caps.currentTransform;
-    info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+#endif
+    // Android surfaces commonly offer only "inherit"
+    info.compositeAlpha = (caps.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR) ? VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR
+                                                                                             : VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR;
     info.presentMode = present_mode;
     info.clipped = VK_TRUE;
     info.oldSwapchain = swapchain.handle;

@@ -94,6 +94,8 @@ public:
     bool force_vsync_off = false;
     uint32_t extra_swapchain_images = 0;  // frame generation holds two images per frame: more are needed to keep acquiring
 
+    std::string unsupported;  // after a failed Init: what this device lacks, for the player; empty when it failed for another reason
+
     bool want_ray_query = false;
     bool ray_query_supported = false;
     bool ray_query = false;

@@ -1,0 +1,109 @@
+plugins {
+    id "com.android.application"
+}
+
+// Pinned like cmake/Dependencies.cmake: SDL's Java half has to match its native half, so both come from this one checkout.
+def sdlTag = "release-3.4.16"
+def repoRoot = rootProject.projectDir.parentFile
+def depsDir = new File(rootProject.projectDir, ".deps")
+def sdlDir = new File(depsDir, "SDL-${sdlTag}")
+def generatedAssets = layout.buildDirectory.dir("generated/ptassets").get().asFile
+
+android {
+    namespace "io.github.codepdbh.ptevolved"
+    compileSdk 36
+    ndkVersion "28.2.13676358"
+
+    defaultConfig {
+        applicationId "io.github.codepdbh.ptevolved"
+        // Vulkan 1.3 is what the renderer needs, and devices ship it from Android 13: docs/android/REQUIREMENTS.md
+        minSdk 33
+        targetSdk 36
+        versionCode 1
+        versionName "0.1.0"
+        ndk { abiFilters "arm64-v8a" }
+        externalNativeBuild {
+            cmake {
+                arguments "-DPT_SDL_DIR=${sdlDir.absolutePath.replace('\\', '/')}",
+                          "-DPT_DEPS_DIR=${depsDir.absolutePath.replace('\\', '/')}/fetch",
+                          "-DANDROID_STL=c++_shared"
+                cppFlags "-std=c++20", "-fexceptions", "-frtti"
+                targets "main"
+            }
+        }
+    }
+    externalNativeBuild {
+        cmake {
+            path "src/main/cpp/CMakeLists.txt"
+            version "3.30.5"
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+        }
+    }
+    buildFeatures { buildConfig true }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    sourceSets {
+        main {
+            java.srcDirs += new File(sdlDir, "android-project/app/src/main/java")
+            assets.srcDirs += generatedAssets
+        }
+    }
+    packaging {
+        jniLibs { useLegacyPackaging false }
+    }
+}
+
+static void runChecked(List<String> command, File dir) {
+    def process = new ProcessBuilder(command).directory(dir).redirectErrorStream(true).start()
+    def output = process.inputStream.text
+    if (process.waitFor() != 0) {
+        throw new GradleException("failed: ${command.join(' ')}\n${output}")
+    }
+}
+
+tasks.register("fetchSdl") {
+    outputs.dir(sdlDir)
+    onlyIf { !new File(sdlDir, "CMakeLists.txt").exists() }
+    doLast {
+        depsDir.mkdirs()
+        runChecked(["git", "-c", "advice.detachedHead=false", "clone", "--depth", "1", "--branch", sdlTag,
+                    "https://github.com/libsdl-org/SDL.git", sdlDir.absolutePath], depsDir)
+    }
+}
+
+// Shaders are compiled here, not in the native build: assets are merged before that build has run.
+tasks.register("packRuntimeAssets") {
+    def shaderDir = new File(repoRoot, "shaders")
+    def fontDir = new File(repoRoot, "assets/fonts")
+    inputs.dir(shaderDir)
+    inputs.dir(fontDir)
+    outputs.dir(generatedAssets)
+    doLast {
+        def glslc = new File(android.ndkDirectory, "shader-tools/windows-x86_64/glslc.exe")
+        if (!glslc.exists()) glslc = new File(android.ndkDirectory, "shader-tools/linux-x86_64/glslc")
+        if (!glslc.exists()) glslc = new File(android.ndkDirectory, "shader-tools/darwin-x86_64/glslc")
+        if (!glslc.exists()) throw new GradleException("glslc not found in ${android.ndkDirectory}/shader-tools")
+        def spirv = new File(generatedAssets, "shaders")
+        delete(generatedAssets)
+        spirv.mkdirs()
+        def sources = shaderDir.listFiles().findAll { it.name ==~ /.*\.(vert|frag|comp)/ }
+        sources.parallelStream().forEach { File shader ->
+            runChecked([glslc.absolutePath, "--target-env=vulkan1.3", "-O", shader.absolutePath,
+                        "-o", new File(spirv, "${shader.name}.spv").absolutePath], shaderDir)
+        }
+        copy {
+            from fontDir
+            include "*.ttf", "OFL-*.txt"
+            into new File(generatedAssets, "fonts")
+        }
+    }
+}
+
+tasks.named("preBuild") { dependsOn "fetchSdl", "packRuntimeAssets" }

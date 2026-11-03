@@ -1,3 +1,6 @@
 # Model fingerprints depend on the exact converted bytes.
 third_party/texture_models/*.param -text
 third_party/texture_models/*.bin binary
+
+# run by sh on Linux and WSL
+android/gradlew text eol=lf

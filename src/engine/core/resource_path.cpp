@@ -5,6 +5,12 @@
 namespace pt {
 
 std::filesystem::path ExecutableDir() {
+#ifdef PT_ANDROID
+    // an APK has no folder of plain files beside the program: PtActivity unpacks shaders/ and fonts/ here
+    if (const char* internal = SDL_GetAndroidInternalStoragePath()) {
+        return std::filesystem::path(internal) / "pt" / "runtime";
+    }
+#endif
     const char* base = SDL_GetBasePath();
     return base ? std::filesystem::path(reinterpret_cast<const char8_t*>(base)) : std::filesystem::current_path();
 }

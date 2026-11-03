@@ -6,6 +6,7 @@
 #include <charconv>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <filesystem>
 #include <format>
@@ -170,11 +171,22 @@ private:
             return true;
         }
         double d = 0.0;
+#ifdef PT_ANDROID
+        // the NDK's libc++ has no floating point from_chars; text_ is a std::string, so it ends in a NUL. A debug tool's JSON (--anim-test)
+        const char* start = text_.c_str() + pos_;
+        char* end = nullptr;
+        d = std::strtod(start, &end);
+        if (end == start) {
+            return false;
+        }
+        pos_ = static_cast<size_t>(end - text_.c_str());
+#else
         const auto result = std::from_chars(text_.data() + pos_, text_.data() + text_.size(), d);
         if (result.ec != std::errc()) {
             return false;
         }
         pos_ = static_cast<size_t>(result.ptr - text_.data());
+#endif
         out.type = Number;
         std::memcpy(&out.data, &d, 8);
         return true;

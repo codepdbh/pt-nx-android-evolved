@@ -30,6 +30,13 @@ Build/
 *.bnk
 *.wem
 
+# Android build products and fetched dependencies
+/android/.deps/
+/android/.gradle/
+/android/.kotlin/
+/android/local.properties
+/android/app/.cxx/
+
 __pycache__/
 *.pyc
 pt.log
